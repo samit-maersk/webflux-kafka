@@ -3,7 +3,8 @@ spring:
     name: @project.artifactId@
   kafka:
     topic: topic-1
-    bootstrap-servers: http://127.0.0.1:9092
+    bootstrap-servers: http://localhost:9092
+    schema.registry.url: http://localhost:8081
     producer:
         key-serializer: org.apache.kafka.common.serialization.StringSerializer
         value-serializer: org.apache.kafka.common.serialization.StringSerializer
