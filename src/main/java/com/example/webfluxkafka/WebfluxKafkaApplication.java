@@ -3,6 +3,7 @@ package com.example.webfluxkafka;
 import io.confluent.developer.User;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -42,6 +43,7 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @SpringBootApplication
 @Slf4j
@@ -81,8 +83,11 @@ public class WebfluxKafkaApplication {
 		return new NewTopic(topicName, 1, (short) 1);
 	}
 
+	// Instead od Bean , we can also use @EventListener(ApplicationStartedEvent.class) to start a consumer
+	//@EventListener(ApplicationStartedEvent.class)
+	//    public Disposable consume() {..}
 	@Bean
-	ApplicationListener<ApplicationReadyEvent> ready(UsersRepository usersRepository) {
+	ApplicationListener<ApplicationReadyEvent> consume(UsersRepository usersRepository) {
 		return event -> {
 			//Consumer 1
 			Map<String, Object> consumerProps = new HashMap<>();
@@ -91,13 +96,14 @@ public class WebfluxKafkaApplication {
 			consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 			consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
 			consumerProps.put(AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistry);
+			consumerProps.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true);
 
 //			consumerProps.put(AbstractKafkaSchemaSerDeConfig.BASIC_AUTH_CREDENTIALS_SOURCE, "USER_INFO");
 //			consumerProps.put(AbstractKafkaSchemaSerDeConfig.USER_INFO_CONFIG, schemaRegistryUsername + ":" + schemaRegistryPassword);
 
 			ReceiverOptions<String, User> receiverOptions =
 					ReceiverOptions.<String, User>create(consumerProps)
-							.pollTimeout(Duration.ofMillis(5000))
+							//.pollTimeout(Duration.ofMillis(5000))
 							.subscription(Collections.singleton(topicName));
 
 			Flux<ReceiverRecord<String, User>> inboundFlux =
@@ -106,6 +112,15 @@ public class WebfluxKafkaApplication {
 
 			inboundFlux
 					// store this in the db. If success r.receiverOffset().acknowledge() or else don't clear the offset..rather retry
+					.concatMap(r -> {
+						//This might give an error, Hence KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true need to be set
+						var u = r.value();
+						return usersRepository.save(new Users(null,u.getName(), u.getAge()))
+								.onErrorResume(e -> Mono.error(e))
+								.doOnSuccess(dr -> log.info("db save success"))
+								.doOnError(dr -> log.error("db save failure"))
+								.flatMap(v -> Mono.just(r));
+					})
 					.subscribe(r -> {
 						log.info("Received message: {}\n", r);
 						r.receiverOffset().acknowledge();
@@ -116,13 +131,14 @@ public class WebfluxKafkaApplication {
 
 	//route
 	@Bean
-	RouterFunction routes() {
+	RouterFunction routes(UsersRepository usersRepository) {
 		return RouterFunctions.route()
 				.POST("/send-message", request -> {
 					return request.bodyToMono(String.class)
 							.doOnNext(msg -> sendMessage(topicName))
 							.then(ServerResponse.ok().build());
 				})
+				.GET("/users", request -> ServerResponse.ok().body(usersRepository.findAll(), Users.class))
 				.build();
 	}
 
