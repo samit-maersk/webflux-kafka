@@ -2,17 +2,21 @@ spring:
   application:
     name: @project.artifactId@
   kafka:
-    topic: topic-1
+    topic:
+      topic1: topic-1
+      bank: bank
+      user: user
     bootstrap-servers: http://localhost:9092
     schema.registry.url: http://localhost:8081
-    producer:
-        key-serializer: org.apache.kafka.common.serialization.StringSerializer
-        value-serializer: org.apache.kafka.common.serialization.StringSerializer
-    consumer:
-      group-id: @project.artifactId@
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    # Below properties are relevent to spring kafka
+#    producer:
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+#    consumer:
+#      group-id: @project.artifactId@
+#      auto-offset-reset: earliest
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
   data:
     mongodb:
       uri: mongodb://localhost:27017
