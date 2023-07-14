@@ -25,3 +25,17 @@ An example of using Spring WebFlux and reactor Kafka:
 ```shell
 kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic topic-1 --from-beginning --max-messages 10
 ```
+
+- To deal with `schema registry`
+```
+#Key
+curl -X POST http://localhost:8081/subjects/TOPIC_NAME-KEY/versions" -d {schema: KEY_FILE_CONTENT} -H "Accept: application/json"
+
+#Value
+curl -X POST http://localhost:8081/subjects/TOPIC_NAME-KEY/versions" -d {schema: VALUE_FILE_CONTENT} -H "Accept: application/json"
+```
+
+- To deal with Kafka `Topic and Group`
+```
+# todo
+```
