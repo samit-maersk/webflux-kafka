@@ -28,9 +28,9 @@ public class TestController {
     }
 
     @PostMapping("/publish/avro")
-    public void avroMessageToTopic(@RequestParam("message") String message){
+    public void avroMessageToTopic(@RequestBody MessageRequest messageRequest){
 
-        this.producer.sendMessage(message);
+        this.producer.sendAvroMessage(messageRequest);
 
     }
 }

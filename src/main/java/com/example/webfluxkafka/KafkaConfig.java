@@ -38,7 +38,7 @@ public class KafkaConfig {
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String,
             MessageRequest>
-    bookListener()
+    messageListener()
     {
         ConcurrentKafkaListenerContainerFactory<
             String, MessageRequest> factory

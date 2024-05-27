@@ -18,7 +18,7 @@ public class Consumer {
     }
 
 
-    @KafkaListener(topics = "topic-1", groupId = "sample-group", containerFactory = "bookListener")
+    @KafkaListener(topics = "topic-1", groupId = "sample-group", containerFactory = "messageListener")
     public void consumeJsonMessage(MessageRequest message) {
 
         System.out.println("message received" + " " + message);
