@@ -50,8 +50,8 @@ public class WebfluxKafkaApplication {
 					log.info("Sending JSON message to kafka topic {}", topicName);
 					return request.bodyToMono(Message.class)
 							.doOnNext(message -> kafkaTemplate.send(topicName, message))
-							.doOnSuccess(s -> log.info("JSON Message sent to kafka"))
-							.doOnError(e -> log.error("error while sending JSON message to kafka", e))
+							.doOnSuccess(s -> log.info("AVRO Message sent to kafka"))
+							.doOnError(e -> log.error("error while sending AVRO message to kafka", e))
 							.then(ServerResponse.ok().bodyValue(Map.of("message", "SUCCESS")));
 				})
 				.GET("/db", request -> ServerResponse.ok().body(messageRepository.findAll(), Message.class))
@@ -84,10 +84,10 @@ class KafkaConsumer {
 	@KafkaListener(topics = "${spring.kafka.topic}")
 	public void processJsonMessage(@Payload(required = true) Message message/*, @Header(KafkaHeaders.RECEIVED_KEY) String key*/) {
 		//log.info("message consumed from kafka , message : {}, header : {} ", content, key);
-		log.info("[*] Received JSON Message {}", message);
+		log.info("[*] Received AVRO Message {}", message);
 		messageRepository.save(message)
-				.doOnSuccess(m -> log.info("JSON message saved to mongo"))
-				.doOnError(e -> log.error("error while saving JSON message to mongo", e))
+				.doOnSuccess(m -> log.info("AVRO message saved to mongo"))
+				.doOnError(e -> log.error("error while saving AVRO message to mongo", e))
 				.subscribe();
 	}
 }

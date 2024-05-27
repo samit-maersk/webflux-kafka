@@ -10,6 +10,7 @@ Different branch has different implementation. Click on below link for the refer
 
 - [Example Of Spring Kafka Text Message | [main] ]()
 - [Example Of Spring Kafka JSON Message | [spring-kafka-json] ]()
+- [Example Of Spring Kafka AVRO Message | [spring-kafka-avro] ]()
 - [Example Of Reactor Kafka | [reactor-kafka] ]()
 - [Example Of Record Kafka Avro | [reactor-kafka-avro ]]()
 
