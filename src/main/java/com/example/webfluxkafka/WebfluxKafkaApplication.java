@@ -1,128 +1,115 @@
 package com.example.webfluxkafka;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.IntegerDeserializer;
-import org.apache.kafka.common.serialization.IntegerSerializer;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
-import org.springframework.kafka.core.KafkaAdmin;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.repository.reactive.ReactiveCrudRepository;
+import org.springframework.http.MediaType;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.config.TopicBuilder;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import reactor.core.publisher.Flux;
-import reactor.kafka.receiver.KafkaReceiver;
-import reactor.kafka.receiver.ReceiverOptions;
-import reactor.kafka.receiver.ReceiverRecord;
-import reactor.kafka.sender.KafkaSender;
-import reactor.kafka.sender.SenderOptions;
-import reactor.kafka.sender.SenderRecord;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+
+import static org.springframework.web.reactive.function.server.RequestPredicates.accept;
 
 @SpringBootApplication
 @Slf4j
+@RequiredArgsConstructor
 public class WebfluxKafkaApplication {
-
-	@Value("${spring.kafka.bootstrap-servers}")
-	private String bootstrapServers;
-
-	@Value("${spring.kafka.topic}")
-	private String topicName;
 
 	public static void main(String[] args) {
 		SpringApplication.run(WebfluxKafkaApplication.class, args);
 	}
 
-	// Both kafkaAdmin and topic1 are Optional If you are working on a real project, you should create a topic manually.
+	@Value("${spring.kafka.topic}")
+	public String topicName;
+	final KafkaTemplate<String, String> stringKafkaTemplate;
+	final MessageRepository messageRepository;
+
+
+	//Router
 	@Bean
-	public KafkaAdmin kafkaAdmin() {
-		Map<String, Object> configs = new HashMap<>();
-		configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-		return new KafkaAdmin(configs);
-	}
-
-	@Bean
-	public NewTopic topic1() {
-		return new NewTopic(topicName, 1, (short) 1);
-	}
-
-
-	@Bean
-	KafkaSender<Integer, String> kafkaSender() {
-		Map<String, Object> producerProps = new HashMap<>();
-		producerProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-		producerProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, IntegerSerializer.class);
-		producerProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-
-		SenderOptions<Integer, String> senderOptions =
-				SenderOptions.<Integer, String>create(producerProps)
-						.maxInFlight(1024);
-
-		return KafkaSender.create(senderOptions);
-	}
-
-
-	@Bean
-	ApplicationListener<ApplicationReadyEvent> ready() {
-		return event -> {
-			Map<String, Object> consumerProps = new HashMap<>();
-			consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-			consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, "sample-group");
-			consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, IntegerDeserializer.class);
-			consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-
-			ReceiverOptions<Integer, String> receiverOptions =
-					ReceiverOptions.<Integer, String>create(consumerProps)
-							.subscription(Collections.singleton(topicName));
-
-			Flux<ReceiverRecord<Integer, String>> inboundFlux =
-					KafkaReceiver.create(receiverOptions)
-							.receive();
-
-			inboundFlux.subscribe(r -> {
-				log.info("Received message: {}\n", r);
-				r.receiverOffset().acknowledge();
-			});
-		};
-	}
-
-	//route
-	@Bean
-	RouterFunction routes(KafkaSender sender) {
-		return RouterFunctions.route()
-				.POST("/send-message", request -> {
+	RouterFunction<ServerResponse> routes() {
+		return RouterFunctions
+				.route()
+				.POST("/send-message", accept(MediaType.TEXT_PLAIN), request -> {
+					log.info("Sending Text message to kafka topic {}", topicName);
 					return request.bodyToMono(String.class)
-							.doOnNext(msg -> sendMessage(sender, topicName))
-							.then(ServerResponse.ok().build());
+							.doOnNext(message -> stringKafkaTemplate.send(topicName, message))
+							.doOnSuccess(s -> log.info("Text Message sent to kafka"))
+							.doOnError(e -> log.error("error while sending Text message to kafka", e))
+							.then(ServerResponse.ok().bodyValue(Map.of("message", "SUCCESS")));
+				})
+				.GET("/db", request -> ServerResponse.ok().body(messageRepository.findAll(), Message.class))
+				.after((request, response) -> {
+					log.info("{} {} {}",request.method(), request.path(), response.statusCode());
+					request.headers().asHttpHeaders().forEach((k, v) -> log.info("{}: {}", k, v));
+					return response;
 				})
 				.build();
 	}
 
-	private void sendMessage(KafkaSender sender, String topicName) {
-		var partition = 0;
-		var currentTimeInLong = LocalDateTime.now().atZone(ZoneOffset.UTC).toInstant().toEpochMilli();
+}
 
-		Flux<SenderRecord<Integer, String, Integer>> outboundFlux = Flux.range(1, 10)
-				.map(i -> SenderRecord.create(topicName, partition, currentTimeInLong , i, "Message_" + i, i));
+@Configuration
+class KafkaConfigurations {
+	/*@Value("${spring.kafka.bootstrap-servers}")
+	private String bootstrapAddress;*/
 
-		sender.send(outboundFlux)
-				.doOnError(e-> log.error("Send failed", e))
-				.doOnNext(r -> log.info("Message Sent" ))
-				.subscribe();
+	// Note - Topic creation in real time project is not recommended as each organisation has its own topic creation strategy in a automated way.
+	@Bean
+	public NewTopic createTopic(@Value("${spring.kafka.topic}") String textTopicName) {
+		return TopicBuilder.name(textTopicName).partitions(1).replicas(1).build();
 	}
 
+	// Not needed as the config is already provided in application.yml file
+	/*@Bean
+	public KafkaTemplate<String, String> kafkaTemplate() {
+		KafkaTemplate<String, String> kafkaTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(
+				Map.of(
+						ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress,
+						ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
+						ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class
+				)
+		));
+		kafkaTemplate.setObservationEnabled(true);
+		return kafkaTemplate;
+	}*/
 }
+
+@Component
+@Slf4j
+@RequiredArgsConstructor
+class KafkaConsumer {
+	final MessageRepository messageRepository;
+
+	@KafkaListener(topics = "${spring.kafka.topic}")
+	public void processTextMessage(@Payload(required = false) String message/*, @Header(KafkaHeaders.RECEIVED_KEY) String key*/) {
+		//log.info("message consumed from kafka , message : {}, header : {} ", content, key);
+		log.info("[*] Received Text Message {}", message);
+		messageRepository.save(new Message(null, message))
+				.doOnSuccess(m -> log.info("Text message saved to mongo"))
+				.doOnError(e -> log.error("error while saving Text message to mongo", e))
+				.subscribe();
+	}
+}
+
+@Repository
+interface MessageRepository extends ReactiveCrudRepository<Message, String> {}
+
+@Document
+record Message(@Id String id, String message) {}
