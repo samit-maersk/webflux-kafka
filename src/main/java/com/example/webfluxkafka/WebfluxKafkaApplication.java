@@ -96,6 +96,11 @@ public class WebfluxKafkaApplication {
 			inboundFlux.subscribe(r -> {
 				log.info("Received message: {}\n", r);
 				r.receiverOffset().acknowledge();
+				System.out.printf("Received message: topic-partition=%s offset=%d key=%d value=%s%n",
+					r.receiverOffset().topicPartition(),
+					r.receiverOffset().offset(),
+					r.key(),
+					r.value());
 			});
 		};
 	}
@@ -104,11 +109,9 @@ public class WebfluxKafkaApplication {
 	@Bean
 	RouterFunction routes(KafkaSender sender) {
 		return RouterFunctions.route()
-				.POST("/send-message", request -> {
-					return request.bodyToMono(String.class)
-							.doOnNext(msg -> sendMessage(sender, topicName))
-							.then(ServerResponse.ok().build());
-				})
+				.POST("/send-message", request -> request.bodyToMono(String.class)
+						.doOnNext(msg -> sendMessage(sender, topicName))
+						.then(ServerResponse.ok().build()))
 				.build();
 	}
 
