@@ -67,28 +67,12 @@ public class WebfluxKafkaApplication {
 
 @Configuration
 class KafkaConfigurations {
-	/*@Value("${spring.kafka.bootstrap-servers}")
-	private String bootstrapAddress;*/
 
 	// Note - Topic creation in real time project is not recommended as each organisation has its own topic creation strategy in a automated way.
 	@Bean
 	public NewTopic createTopic(@Value("${spring.kafka.topic}") String textTopicName) {
 		return TopicBuilder.name(textTopicName).partitions(1).replicas(1).build();
 	}
-
-	// Not needed as the config is already provided in application.yml file
-	/*@Bean
-	public KafkaTemplate<String, String> kafkaTemplate() {
-		KafkaTemplate<String, String> kafkaTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(
-				Map.of(
-						ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress,
-						ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
-						ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class
-				)
-		));
-		kafkaTemplate.setObservationEnabled(true);
-		return kafkaTemplate;
-	}*/
 }
 
 @Component
