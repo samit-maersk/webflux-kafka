@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.DockerComposeFiles;
 import org.testcontainers.containers.MongoDBContainer;
@@ -27,15 +28,12 @@ class WebfluxKafkaApplicationTests {
 
 	@Container
 	@ServiceConnection
-	static KafkaContainer kafkaContainer = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:latest").asCompatibleSubstituteFor("apache/kafka:latest"))
-			.withExposedPorts(9092)
-			.waitingFor(Wait.forListeningPorts(9092));
+	static KafkaContainer kafkaContainer = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:latest").asCompatibleSubstituteFor("apache/kafka:latest"));
 
 	@Container
 	@ServiceConnection
 	static MongoDBContainer mongoDbContainer = new MongoDBContainer(DockerImageName.parse("mongo:latest"))
 			.waitingFor(Wait.forListeningPort());
-
 
 	@Autowired
 	WebTestClient webTestClient;
@@ -51,7 +49,12 @@ class WebfluxKafkaApplicationTests {
 				() -> webTestClient
 						.post()
 						.uri("/send-message")
-						.bodyValue("Hello Kafka")
+						.contentType(MediaType.APPLICATION_JSON)
+						.bodyValue("""
+								{
+									"content": "Hello, Kafka!"
+								}
+								""")
 						.exchange()
 						.expectStatus().isOk(),
 				() -> webTestClient

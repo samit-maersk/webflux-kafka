@@ -8,7 +8,8 @@ Different branch has different implementation. Click on below link for the refer
 
 > Note 2.) - When you start the application it will bring necessary infrastructure related to Kafka like Kafka server , Zookeeper, Schema Registry and etc. For more information you can take a look on `compose.yaml` file.
 
-- [Example Of Spring Kafka | [main] ]()
+- [Example Of Spring Kafka Text Message | [main] ]()
+- [Example Of Spring Kafka JSON Message | [spring-kafka-json] ]()
 - [Example Of Reactor Kafka | [reactor-kafka] ]()
 - [Example Of Record Kafka Avro | [reactor-kafka-avro ]]()
 

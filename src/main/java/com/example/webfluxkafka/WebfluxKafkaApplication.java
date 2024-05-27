@@ -37,7 +37,7 @@ public class WebfluxKafkaApplication {
 
 	@Value("${spring.kafka.topic}")
 	public String topicName;
-	final KafkaTemplate<String, String> stringKafkaTemplate;
+	final KafkaTemplate<String, Message> kafkaTemplate;
 	final MessageRepository messageRepository;
 
 
@@ -46,12 +46,12 @@ public class WebfluxKafkaApplication {
 	RouterFunction<ServerResponse> routes() {
 		return RouterFunctions
 				.route()
-				.POST("/send-message", accept(MediaType.TEXT_PLAIN), request -> {
-					log.info("Sending Text message to kafka topic {}", topicName);
-					return request.bodyToMono(String.class)
-							.doOnNext(message -> stringKafkaTemplate.send(topicName, message))
-							.doOnSuccess(s -> log.info("Text Message sent to kafka"))
-							.doOnError(e -> log.error("error while sending Text message to kafka", e))
+				.POST("/send-message", accept(MediaType.APPLICATION_JSON), request -> {
+					log.info("Sending JSON message to kafka topic {}", topicName);
+					return request.bodyToMono(Message.class)
+							.doOnNext(message -> kafkaTemplate.send(topicName, message))
+							.doOnSuccess(s -> log.info("JSON Message sent to kafka"))
+							.doOnError(e -> log.error("error while sending JSON message to kafka", e))
 							.then(ServerResponse.ok().bodyValue(Map.of("message", "SUCCESS")));
 				})
 				.GET("/db", request -> ServerResponse.ok().body(messageRepository.findAll(), Message.class))
@@ -67,28 +67,12 @@ public class WebfluxKafkaApplication {
 
 @Configuration
 class KafkaConfigurations {
-	/*@Value("${spring.kafka.bootstrap-servers}")
-	private String bootstrapAddress;*/
 
 	// Note - Topic creation in real time project is not recommended as each organisation has its own topic creation strategy in a automated way.
 	@Bean
 	public NewTopic createTopic(@Value("${spring.kafka.topic}") String textTopicName) {
 		return TopicBuilder.name(textTopicName).partitions(1).replicas(1).build();
 	}
-
-	// Not needed as the config is already provided in application.yml file
-	/*@Bean
-	public KafkaTemplate<String, String> kafkaTemplate() {
-		KafkaTemplate<String, String> kafkaTemplate = new KafkaTemplate<>(new DefaultKafkaProducerFactory<>(
-				Map.of(
-						ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapAddress,
-						ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class,
-						ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class
-				)
-		));
-		kafkaTemplate.setObservationEnabled(true);
-		return kafkaTemplate;
-	}*/
 }
 
 @Component
@@ -98,12 +82,12 @@ class KafkaConsumer {
 	final MessageRepository messageRepository;
 
 	@KafkaListener(topics = "${spring.kafka.topic}")
-	public void processTextMessage(@Payload(required = false) String message/*, @Header(KafkaHeaders.RECEIVED_KEY) String key*/) {
+	public void processJsonMessage(@Payload(required = true) Message message/*, @Header(KafkaHeaders.RECEIVED_KEY) String key*/) {
 		//log.info("message consumed from kafka , message : {}, header : {} ", content, key);
-		log.info("[*] Received Text Message {}", message);
-		messageRepository.save(new Message(null, message))
-				.doOnSuccess(m -> log.info("Text message saved to mongo"))
-				.doOnError(e -> log.error("error while saving Text message to mongo", e))
+		log.info("[*] Received JSON Message {}", message);
+		messageRepository.save(message)
+				.doOnSuccess(m -> log.info("JSON message saved to mongo"))
+				.doOnError(e -> log.error("error while saving JSON message to mongo", e))
 				.subscribe();
 	}
 }
