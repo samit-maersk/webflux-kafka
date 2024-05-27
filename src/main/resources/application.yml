@@ -4,16 +4,17 @@ spring:
   kafka:
     topic: test
     bootstrap-servers: http://localhost:9092
+    properties:
+      schema.registry.url: http://localhost:8081
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.AvroSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
     consumer:
       group-id: "test-group"
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.AvroDeserializer
+      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
       auto-offset-reset: earliest
-      properties:
-        spring.json.trusted.packages: com.example.webfluxkafka
+
   data:
     mongodb:
       uri: mongodb://localhost:27017

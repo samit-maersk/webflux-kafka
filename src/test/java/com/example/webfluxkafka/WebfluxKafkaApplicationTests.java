@@ -10,7 +10,9 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.DockerComposeFiles;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.containers.wait.strategy.WaitStrategy;
 import org.testcontainers.junit.jupiter.Container;
@@ -26,13 +28,28 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 @Ignore
 class WebfluxKafkaApplicationTests {
 
+	static Network network = Network.newNetwork();
 	@Container
 	@ServiceConnection
-	static KafkaContainer kafkaContainer = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:latest").asCompatibleSubstituteFor("apache/kafka:latest"));
+	static MongoDBContainer MONGODB = new MongoDBContainer(DockerImageName.parse("mongo"))
+			.withNetwork(network)
+			.waitingFor(Wait.forListeningPort());
 
 	@Container
-	@ServiceConnection
-	static MongoDBContainer mongoDbContainer = new MongoDBContainer(DockerImageName.parse("mongo:latest"))
+	static KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka").asCompatibleSubstituteFor("apache/kafka"))
+			.withNetwork(network)
+			.withExposedPorts(9093)
+			.withEnv("KAFKA_LISTENERS", "PLAINTEXT://0.0.0.0:9093 ,BROKER://0.0.0.0:9092")
+			.withEnv("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", "BROKER:PLAINTEXT,PLAINTEXT:PLAINTEXT")
+			.waitingFor(Wait.forListeningPort());
+	@Container
+	static GenericContainer<?> SCHEMA_REGISTRY = new GenericContainer<>(DockerImageName.parse("confluentinc/cp-schema-registry"))
+			.withNetwork(network)
+			.dependsOn(KAFKA)
+			.withExposedPorts(8081)
+			.withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
+			.withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:8081")
+			.withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", KAFKA.getNetworkAliases().get(0)+":9092")
 			.waitingFor(Wait.forListeningPort());
 
 	@Autowired
