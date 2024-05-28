@@ -1,5 +1,6 @@
 package com.example.webfluxkafka;
 
+import com.example.avro.Person;
 import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
@@ -44,19 +45,21 @@ public class Producer {
         kafkaTemplateJson.send(TOPIC,message);
         System.out.println("message sent"+ " " + message.getMessage());
     }
-    public void sendAvroMessage(MessageRequest message){
+
+    //avro not working here its in spring-kafka-registry
+    public void sendAvroMessage(Person person){
 
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
+        configProps.put("schema.registry.url", "http://localhost:8081");
+        ProducerFactory<String, Person> producerFactory = new DefaultKafkaProducerFactory<>(configProps);
+        KafkaTemplate<String, Person> kafkaTemplateAvro = new KafkaTemplate<>(producerFactory);
 
-        ProducerFactory<String, MessageRequest> producerFactory = new DefaultKafkaProducerFactory<>(configProps);
-        KafkaTemplate<String, MessageRequest> kafkaTemplateAvro = new KafkaTemplate<>(producerFactory);
 
-
-        kafkaTemplateAvro.send(TOPIC,message);
-        System.out.println("message sent"+ " " + message.getMessage());
+        kafkaTemplateAvro.send(TOPIC,person);
+        System.out.println("message sent"+ " " + person.getName());
     }
 
 }

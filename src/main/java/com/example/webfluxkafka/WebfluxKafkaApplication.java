@@ -40,7 +40,7 @@ public class WebfluxKafkaApplication {
 	@Value("${spring.kafka.bootstrap-servers}")
 	private String bootstrapServers;
 
-	@Value("${spring.kafka.topic}")
+	//@Value("${spring.kafka.topic}")
 	private String topicName;
 
 	public static void main(String[] args) {

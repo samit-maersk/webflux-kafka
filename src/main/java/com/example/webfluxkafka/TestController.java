@@ -1,5 +1,6 @@
 package com.example.webfluxkafka;
 
+import com.example.avro.Person;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,10 +28,11 @@ public class TestController {
 
     }
 
+    //avro not working here its in spring-kafka-registry
     @PostMapping("/publish/avro")
-    public void avroMessageToTopic(@RequestBody MessageRequest messageRequest){
+    public void avroMessageToTopic(@RequestBody Person person){
 
-        this.producer.sendAvroMessage(messageRequest);
+        this.producer.sendAvroMessage(person);
 
     }
 }
