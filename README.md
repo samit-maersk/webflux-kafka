@@ -21,20 +21,19 @@ An example of using Spring WebFlux and reactor Kafka:
 - [consumer](https://github.com/reactor/reactor-kafka/blob/main/reactor-kafka-samples/src/main/java/reactor/kafka/samples/SampleConsumer.java)
 
 
-## Kafka debug:
+## Debugging Commands:
 
 ```shell
+  sh -c "
+    kafka-topics --bootstrap-server localhost:9092 --list
 
-      sh -c "
-        kafka-topics --bootstrap-server localhost:9092 --list
+    echo -e 'Creating kafka topics'
+    kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic topic-1 --replication-factor 1 --partitions 1
+    kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic topic-2 --replication-factor 1 --partitions 1
 
-        echo -e 'Creating kafka topics'
-        kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic topic-1 --replication-factor 1 --partitions 1
-        kafka-topics --bootstrap-server localhost:9092 --create --if-not-exists --topic topic-2 --replication-factor 1 --partitions 1
-
-        echo -e 'Successfully created the following topics:'
-        kafka-topics --bootstrap-server localhost:9092 --list
-      "
+    echo -e 'Successfully created the following topics:'
+    kafka-topics --bootstrap-server localhost:9092 --list
+  "
 ```
 
 #### To see the messages in Kafka topic:
@@ -43,18 +42,25 @@ An example of using Spring WebFlux and reactor Kafka:
 kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic topic-1 --from-beginning --max-messages 10
 ```
 
-#### To deal with `schema registry`
+## To deal with `schema registry`
+
+> If wanted to create an automation for dynamically attached schema, dealing with version , Then take a look on [this](https://docs.confluent.io/platform/current/schema-registry/develop/using.html) documentation
 
 ```
 #Key
-curl -X POST http://localhost:8081/subjects/TOPIC_NAME-KEY/versions" -d {schema: KEY_FILE_CONTENT} -H "Accept: application/json"
+curl -X POST http://localhost:8081/subjects/$TOPIC_NAME-key/versions" -d {schema: $KEY_FILE_CONTENT} -H "Accept: application/json"
 
 #Value
-curl -X POST http://localhost:8081/subjects/TOPIC_NAME-KEY/versions" -d {schema: VALUE_FILE_CONTENT} -H "Accept: application/json"
+curl -X POST http://localhost:8081/subjects/$TOPIC_NAME-value/versions" -d {schema: $VALUE_FILE_CONTENT} -H "Accept: application/json"
+
+#Find the schema version and content
+http://localhost:8081/subjects/test-value/versions/latest
+http://localhost:8081/subjects/test-value/versions/latest/schema
+http://localhost:8081/subjects/test-value/versions/1
+http://localhost:8081/subjects/test-value/versions/1/schema
 ```
 
-#### To deal with Kafka `Topic and Group`
-
+## To deal with Kafka `Topic and ConsumerGroup`
 ```
 # todo
 ```
