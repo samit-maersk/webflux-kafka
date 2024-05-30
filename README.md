@@ -10,6 +10,7 @@ Different branch has different implementation. Click on below link for the refer
 
 - [Example Of Spring Kafka | [main] ]()
 - [Example Of Spring Kafka JSON Message | [spring-kafka-json] ]()
+- [Example Of Spring Kafka AVRO Message | [spring-kafka-avro] ]()
 - [Example Of Reactor Kafka | [reactor-kafka] ]()
 - [Example Of Record Kafka Avro | [reactor-kafka-avro ]]()
 
@@ -21,6 +22,8 @@ An example of using Spring WebFlux and reactor Kafka:
 
 
 ## Kafka debug:
+
+#### Kafka Topic creation
 
 ```shell
 
@@ -46,10 +49,10 @@ kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic topic-1 --fr
 
 ```
 #Key
-curl -X POST http://localhost:8081/subjects/TOPIC_NAME-KEY/versions" -d {schema: KEY_FILE_CONTENT} -H "Accept: application/json"
+curl -X POST http://localhost:8081/subjects/$TOPIC_NAME-key/versions" -d {schema: $KEY_SCHEMA_FILE_CONTENT} -H "Accept: application/json"
 
 #Value
-curl -X POST http://localhost:8081/subjects/TOPIC_NAME-KEY/versions" -d {schema: VALUE_FILE_CONTENT} -H "Accept: application/json"
+curl -X POST http://localhost:8081/subjects/$TOPIC_NAME-value/versions" -d {schema: $VALUE_SCHEMA_FILE_CONTENT} -H "Accept: application/json"
 ```
 
 #### To deal with Kafka `Topic and Group`
