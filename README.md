@@ -60,3 +60,9 @@ curl -X POST http://localhost:8081/subjects/$TOPIC_NAME-value/versions" -d {sche
 ```
 # todo
 ```
+
+### Kafka Infrastructure 
+* [Reference](https://medium.com/@erkndmrl/kafka-cluster-with-docker-compose-5864d50f677e)
+> Thanks to @erkndmr
+
+
